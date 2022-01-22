@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% load user_filters %}
+
+{% block title %}
+  <title>
+    {% if is_edit %}
+      Редактировать запись
+    {% else %}
+      Добавить запись
+    {% endif %}
+  </title>
+{% endblock %}
+
+{% block content %}
+  <div class="container py-5">
+    <div class="row justify-content-center">
+      <div class="col-md-8 p-5">
+        <div class="card">
+          <div class="card-header">       
+            {% if is_edit %}
+              Редактировать запись
+            {% else %}
+              Добавить запись
+            {% endif %}             
+          </div>
+          <div class="card-body">        
+            <form method="post" enctype="multipart/form-data">
+              {% csrf_token %}
+              <div class="form-group row my-3 p-3">
+                <label for="id_text">
+                  Текст поста                  
+                  <span class="required text-danger" >*</span>                  
+                </label>
+
+                {{ form.text|addclass:'form-control' }}
+
+                <small id="id_text-help" class="form-text text-muted">
+                  Текст нового поста
+                </small>                  
+              </div>            
+              <div class="form-group row my-3 p-3">
+                <label for="id_group">
+                  Группа                  
+                </label>
+
+                {{ form.group|addclass:'form-control' }}
+
+                <small id="id_group-help" class="form-text text-muted">
+                  Группа, к которой будет относиться пост
+                </small>
+              </div>
+              <div class="form-group row my-3 p-3">
+                <label for="id_group">
+                  Картинка
+                </label>
+
+                {{ form.image|addclass:'form-control' }}
+
+                <small id="id_group-help" class="form-text text-muted">
+                  Загрузить картинку
+                </small>
+              </div>
+              <div class="d-flex justify-content-end">
+                <button type="submit" class="btn btn-primary">
+                  {% if is_edit %}
+                    Сохранить
+                  {% else %}
+                    Добавить
+                  {% endif %}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
