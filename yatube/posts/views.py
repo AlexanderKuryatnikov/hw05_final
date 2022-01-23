@@ -42,10 +42,15 @@ def profile(request, username):
     post_list = author.posts.all()
     post_count = post_list.count()
     page_obj = posts_paginator(request, post_list)
+    if request.user.following.user == author:
+        following = True
+    else:
+        following = False
     context = {
         'author': author,
         'post_count': post_count,
         'page_obj': page_obj,
+        'following': following,
     }
     return render(request, template, context)
 
@@ -105,3 +110,30 @@ def add_comment(request, post_id):
         comment.post = post
         comment.save()
     return redirect('posts:post_detail', post_id=post_id)
+
+
+@login_required
+def follow_index(request):
+    template = 'posts/follow.html'
+    post_list = Post.objects.filter(author__following__user=request.user)
+    page_obj = posts_paginator(request, post_list)
+    context = {
+        'page_obj': page_obj,
+    }
+    return render(request, template, context)
+
+
+@login_required
+def profile_follow(request, username):
+    author = get_object_or_404(User, username=username)
+    author.following = request.user
+    author.save
+    return redirect('posts:profile', username=username)
+
+
+@login_required
+def profile_unfollow(request, username):
+    author = get_object_or_404(User, username=username)
+    author.following = None
+    author.save
+    return redirect('posts:profile', username=username)
