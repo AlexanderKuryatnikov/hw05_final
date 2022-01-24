@@ -350,23 +350,24 @@ class FollowViewTest(TestCase):
     def test_user_can_follow_author(self):
         """Пользователь может подписаться на автора."""
         self.authorized_user_client.force_login(self.authorized_user)
+        follow_count = Follow.objects.count()
         response = self.authorized_user_client.get(
             reverse('posts:profile_follow',
                     kwargs={'username': self.author.username})
         )
-        following = Follow.objects.get(
-            author=self.author,
-            user=self.authorized_user,
-        )
+        following = Follow.objects.last()
         self.assertRedirects(
             response,
             reverse('posts:profile', kwargs={'username': self.author.username})
         )
-        self.assertIsNotNone(following)
+        self.assertEqual(Follow.objects.count(), follow_count + 1)
+        self.assertEqual(following.author, self.author)
+        self.assertEqual(following.user, self.authorized_user)
 
     def test_user_can_unfollow_author(self):
         """Пользователь может отдписаться от автора."""
         self.authorized_follower_client.force_login(self.authorized_follower)
+        follow_count = Follow.objects.count()
         response = self.authorized_follower_client.get(
             reverse('posts:profile_unfollow',
                     kwargs={'username': self.author.username})
@@ -375,6 +376,7 @@ class FollowViewTest(TestCase):
             response,
             reverse('posts:profile', kwargs={'username': self.author.username})
         )
+        self.assertEqual(Follow.objects.count(), follow_count - 1)
         with self.assertRaises(Follow.DoesNotExist):
             Follow.objects.get(
                 author=self.author,
