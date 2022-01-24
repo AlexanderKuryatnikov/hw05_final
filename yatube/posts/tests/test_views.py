@@ -9,7 +9,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
-from ..models import Comment, Group, Post
+from ..models import Follow, Comment, Group, Post
 
 User = get_user_model()
 TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
@@ -286,3 +286,73 @@ class CommentViewTest(TestCase):
         response = self.client.get(reverse('posts:post_detail',
                                            kwargs={'post_id': self.post.pk}))
         self.assertIn(self.comment, response.context.get('comments'))
+
+
+class FollowViewTest(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.author = User.objects.create_user(username='author')
+        cls.authorized_follower = User.objects.create_user(
+            username='auth_follower')
+        cls.authorized_follower_client = Client()
+        cls.authorized_user = User.objects.create_user(username='auth_user')
+        cls.authorized_user_client = Client()
+        Follow.objects.create(
+            user=cls.authorized_follower,
+            author=cls.author,
+        )
+        cls.post = Post.objects.create(
+            author=cls.author,
+            text='Тестовый пост',
+        )
+
+    def test_follow_page_contains_post_for_following_users(self):
+        """Пост отображается для подписанных пользователей."""
+        self.authorized_follower_client.force_login(self.authorized_follower)
+        response = self.authorized_follower_client.get(
+            reverse('posts:follow_index')
+        )
+        self.assertIn(self.post, response.context.get('page_obj'))
+
+    def test_follow_page_does_not_contains_post_for_not_following_users(self):
+        """Пост не отображается для не подписанных пользователей."""
+        self.authorized_user_client.force_login(self.authorized_user)
+        response = self.authorized_user_client.get(
+            reverse('posts:follow_index')
+        )
+        self.assertNotIn(self.post, response.context.get('page_obj'))
+
+    def test_user_can_follow_author(self):
+        """Пользователь может подписаться на автора."""
+        self.authorized_user_client.force_login(self.authorized_user)
+        response = self.authorized_user_client.get(
+            reverse('posts:profile_follow',
+                    kwargs={'username': self.author.username})
+        )
+        following = Follow.objects.get(
+            author=self.author,
+            user=self.authorized_user,
+        )
+        self.assertRedirects(
+            response,
+            reverse('posts:profile', kwargs={'username': self.author.username})
+        )
+        self.assertIsNotNone(following)
+
+    def test_user_can_unfollow_author(self):
+        """Пользователь может отдписаться от автора."""
+        self.authorized_follower_client.force_login(self.authorized_follower)
+        response = self.authorized_follower_client.get(
+            reverse('posts:profile_unfollow',
+                    kwargs={'username': self.author.username})
+        )
+        self.assertRedirects(
+            response,
+            reverse('posts:profile', kwargs={'username': self.author.username})
+        )
+        with self.assertRaises(Follow.DoesNotExist):
+            Follow.objects.get(
+                author=self.author,
+                user=self.authorized_follower,
+            )
