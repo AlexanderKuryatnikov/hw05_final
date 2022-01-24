@@ -1,15 +1,16 @@
-from math import ceil
 import shutil
 import tempfile
+from math import ceil
 
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
-from ..models import Follow, Comment, Group, Post
+from ..models import Comment, Follow, Group, Post
 
 User = get_user_model()
 TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
@@ -153,6 +154,29 @@ class PostsPagesTests(TestCase):
                 form_field = response.context.get('form').fields.get(value)
                 self.assertIsInstance(form_field, expected)
         self.assertEqual(response.context.get('is_edit'), True)
+
+
+class CacheTests(TestCase):
+    def setUp(self):
+        self.author = User.objects.create_user(username='author')
+        self.post = Post.objects.create(
+            author=self.author,
+            text='Тестовый пост',
+        )
+
+    def test_chache_stores_deleted_post_until_cleared(self):
+        """Доступен удалённый пост, пока не очистить кэш принудительно."""
+        response = self.client.get(reverse('posts:index'))
+        post = self.post
+        self.post.delete()
+        self.assertIn(post.text.encode(), response.content)
+
+        response = self.client.get(reverse('posts:index'))
+        self.assertIn(post.text.encode(), response.content)
+
+        cache.clear()
+        response = self.client.get(reverse('posts:index'))
+        self.assertNotIn(post.text.encode(), response.content)
 
 
 class PaginatorViewsTests(TestCase):
