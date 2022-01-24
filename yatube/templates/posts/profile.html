@@ -29,7 +29,10 @@
       {% endif %}
     </div>
 
-    {% include 'posts/includes/page_obj.html' %}
+    {% for post in page_obj %}
+      {% include 'posts/includes/post_in_page_obj.html' %}
+      {% if not forloop.last %}<hr>{% endif %}
+    {% endfor %}
     
     {% include 'posts/includes/paginator.html' %}
   </div>
