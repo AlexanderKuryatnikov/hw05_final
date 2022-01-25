@@ -322,30 +322,34 @@ class FollowViewTest(TestCase):
         cls.authorized_follower_client = Client()
         cls.authorized_user = User.objects.create_user(username='auth_user')
         cls.authorized_user_client = Client()
-        Follow.objects.create(
-            user=cls.authorized_follower,
-            author=cls.author,
-        )
-        cls.post = Post.objects.create(
-            author=cls.author,
-            text='Тестовый пост',
-        )
 
     def test_follow_page_contains_post_for_following_users(self):
         """Пост отображается для подписанных пользователей."""
+        post = Post.objects.create(
+            author=self.author,
+            text='Тестовый пост',
+        )
+        Follow.objects.create(
+            user=self.authorized_follower,
+            author=self.author,
+        )
         self.authorized_follower_client.force_login(self.authorized_follower)
         response = self.authorized_follower_client.get(
             reverse('posts:follow_index')
         )
-        self.assertIn(self.post, response.context.get('page_obj'))
+        self.assertIn(post, response.context.get('page_obj'))
 
     def test_follow_page_does_not_contains_post_for_not_following_users(self):
         """Пост не отображается для не подписанных пользователей."""
+        post = Post.objects.create(
+            author=self.author,
+            text='Тестовый пост',
+        )
         self.authorized_user_client.force_login(self.authorized_user)
         response = self.authorized_user_client.get(
             reverse('posts:follow_index')
         )
-        self.assertNotIn(self.post, response.context.get('page_obj'))
+        self.assertNotIn(post, response.context.get('page_obj'))
 
     def test_user_can_follow_author(self):
         """Пользователь может подписаться на автора."""
@@ -366,6 +370,10 @@ class FollowViewTest(TestCase):
 
     def test_user_can_unfollow_author(self):
         """Пользователь может отдписаться от автора."""
+        Follow.objects.create(
+            user=self.authorized_follower,
+            author=self.author,
+        )
         self.authorized_follower_client.force_login(self.authorized_follower)
         follow_count = Follow.objects.count()
         response = self.authorized_follower_client.get(
